@@ -1,5 +1,6 @@
 package com.example.boardservice.service;
 
+import com.example.boardservice.client.PointClient;
 import com.example.boardservice.client.UserClient;
 import com.example.boardservice.domain.Board;
 import com.example.boardservice.dto.BoardResponseDto;
@@ -19,12 +20,19 @@ import java.util.stream.Collectors;
 @Service
 public class BoardService {
 
+    private static final int BOARD_POINT_DEDUCT_AMOUNT = 100;
+    private static final int BOARD_ACTIVITY_ADD_SCORE = 10;
+
     private final BoardRepository boardRepository;
     private final UserClient userClient;
+    private final PointClient pointClient;
 
-    public BoardService(BoardRepository boardRepository, UserClient userClient) {
+    public BoardService(BoardRepository boardRepository,
+                        UserClient userClient,
+                        PointClient pointClient) {
         this.boardRepository = boardRepository;
         this.userClient = userClient;
+        this.pointClient = pointClient;
     }
 
     @Transactional
@@ -35,7 +43,14 @@ public class BoardService {
                 createBoardRequestDto.getUserId()
         );
 
+        // 포인트 차감
+        this.pointClient.deductPoints(createBoardRequestDto.getUserId(), BOARD_POINT_DEDUCT_AMOUNT);
+
+        // 게시글 작성
         this.boardRepository.save(board);
+
+        // 활동 점수 적립
+        this.userClient.addActivityScore(createBoardRequestDto.getUserId(), BOARD_ACTIVITY_ADD_SCORE);
     }
 
     public BoardResponseDto getBoard(Long boardId) {
