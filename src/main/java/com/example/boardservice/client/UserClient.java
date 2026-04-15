@@ -28,7 +28,7 @@ public class UserClient {
     public Optional<UserResponseDto> fetchUser(Long userId) {
         try {
             UserResponseDto userResponseDto = this.restClient.get()
-                    .uri("/users/{userId}", userId)
+                    .uri("/internal/users/{userId}", userId)
                     .retrieve()
                     .body(UserResponseDto.class); // 응답으로 온 body를 UserResponseDto 형태로 받겠다.
 
@@ -45,7 +45,7 @@ public class UserClient {
         try {
             return this.restClient.get()
                     .uri(uriBuilder -> uriBuilder // 참고) 쿼리파라미터를 사용하려면 uriBuilder 를 사용해야 한다.
-                            .path("/users")
+                            .path("/internal/users")
                             .queryParam("ids", ids)
                             .build()
                     )
@@ -64,7 +64,7 @@ public class UserClient {
         AddActivityScoreRequestDto addActivityScoreRequestDto = new AddActivityScoreRequestDto(userId, score);
 
         this.restClient.post()
-                .uri("/users/activity-score/add")
+                .uri("/internal/users/activity-score/add")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(addActivityScoreRequestDto)
                 .retrieve()
