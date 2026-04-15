@@ -129,6 +129,26 @@ public class BoardService {
         return boardResponseDto;
     }
 
+    // 데이터 조회 최적화
+    public BoardResponseDto getBoard2(Long boardId) {
+        // 게시글 불러오기
+        Board board = boardRepository.findById(boardId)
+                .orElseThrow(() -> new IllegalArgumentException("게시글을 찾을 수 없습니다."));
+
+        // BoardReponseDto 생성
+        BoardResponseDto boardResponseDto = new BoardResponseDto(
+                board.getBoardId(),
+                board.getTitle(),
+                board.getContent(),
+                new UserDto( // 연관관계를 활용한 게시글 사용자 조회
+                        board.getUser().getUserId(),
+                        board.getUser().getName()
+                )
+        );
+
+        return boardResponseDto;
+    }
+
     public List<BoardResponseDto> getBoards() {
         List<Board> boards = boardRepository.findAll();
 
@@ -148,6 +168,23 @@ public class BoardService {
         return boards.stream()
                 .map(b -> new BoardResponseDto(b.getBoardId(), b.getTitle(), b.getContent(), userMap.get(b.getUserId())))
                 .collect(Collectors.toList());
+    }
+
+    // 데이터 조회 최적화
+    public List<BoardResponseDto> getBoards2() {
+        List<Board> boards = boardRepository.findAll();
+
+        return boards.stream()
+                .map(b -> new BoardResponseDto(
+                        b.getBoardId(),
+                        b.getTitle(),
+                        b.getContent(),
+                        new UserDto(
+                                b.getUser().getUserId(),
+                                b.getUser().getName()
+                        )
+                ))
+                .toList();
     }
 
 }

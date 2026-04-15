@@ -30,13 +30,19 @@ public class BoardController {
     public ResponseEntity<BoardResponseDto> getBoard(
             @PathVariable Long boardId
     ) {
-        BoardResponseDto boardResponseDto = boardService.getBoard(boardId);
+        // BoardResponseDto boardResponseDto = boardService.getBoard(boardId);
+
+        // 데이터 조회 최적화
+        BoardResponseDto boardResponseDto = boardService.getBoard2(boardId);
         return ResponseEntity.ok().body(boardResponseDto);
     }
 
     @GetMapping
     public ResponseEntity<List<BoardResponseDto>> getBoards() {
-        List<BoardResponseDto> boardResponseDtos = boardService.getBoards();
+        // List<BoardResponseDto> boardResponseDtos = boardService.getBoards();
+
+        // 데이터 조회 최적화
+        List<BoardResponseDto> boardResponseDtos = boardService.getBoards2();
         return ResponseEntity.ok().body(boardResponseDtos);
     }
 
