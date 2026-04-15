@@ -8,6 +8,11 @@ import com.example.boardservice.dto.CreateBoardRequestDto;
 import com.example.boardservice.domain.BoardRepository;
 import com.example.boardservice.dto.UserDto;
 import com.example.boardservice.dto.UserResponseDto;
+import com.example.boardservice.event.BoardCreatedEvent;
+import com.fasterxml.jackson.core.JsonParseException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClient;
@@ -26,13 +31,16 @@ public class BoardService {
     private final BoardRepository boardRepository;
     private final UserClient userClient;
     private final PointClient pointClient;
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
     public BoardService(BoardRepository boardRepository,
                         UserClient userClient,
-                        PointClient pointClient) {
+                        PointClient pointClient,
+                        KafkaTemplate<String, String> kafkaTemplate) {
         this.boardRepository = boardRepository;
         this.userClient = userClient;
         this.pointClient = pointClient;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     // @Transactional
@@ -46,12 +54,12 @@ public class BoardService {
 
         try {
 
-            // 포인트 차감
+            // 1) 포인트 차감
             this.pointClient.deductPoints(createBoardRequestDto.getUserId(), BOARD_POINT_DEDUCT_AMOUNT);
             isPointDeducted = true;
             System.out.println("포인트 차감 성공");
 
-            // 게시글 작성
+            // 2) 게시글 작성
             Board board = new Board(
                     createBoardRequestDto.getTitle(),
                     createBoardRequestDto.getContent(),
@@ -62,9 +70,16 @@ public class BoardService {
             isBoardCreated = true; // 게시글 저장 성공 플래그
             System.out.println("게시글 저장 성공");
 
-            // 활동 점수 적립
-            this.userClient.addActivityScore(createBoardRequestDto.getUserId(), BOARD_ACTIVITY_ADD_SCORE);
-            System.out.println("포인트 적립 성공");
+            // 3) === [ 활동 점수 적립 ] ===
+            // - 동기 처리 (REST API 통신)
+            // this.userClient.addActivityScore(createBoardRequestDto.getUserId(), BOARD_ACTIVITY_ADD_SCORE);
+            // System.out.println("포인트 적립 성공");
+
+            // - 비동기 처리 (Kafka 이벤트 발행)
+            BoardCreatedEvent boardCreatedEvent = new BoardCreatedEvent(createBoardRequestDto.getUserId());
+            String message = toJsonString(boardCreatedEvent);
+            this.kafkaTemplate.send("board.created", message);
+            System.out.println("게시글 작성 완료 이벤트 발행");
         } catch (Exception e) {
             // === [ saga : 이전에 수행했던 작업에 대해서 다시 그 전 상태로 돌린다. ] ===
 
@@ -83,6 +98,15 @@ public class BoardService {
 
             // (클라이언트도 실패 인지를 할수있도록) 실패 응답으로 처리하기 위해서 예외를 던진다.
             throw e;
+        }
+    }
+
+    private String toJsonString(Object object) {
+        try {
+            ObjectMapper objectMapper = new ObjectMapper();
+            return objectMapper.writeValueAsString(object); // object -> string(json format)
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("JSON 직렬화 실패", e);
         }
     }
 
