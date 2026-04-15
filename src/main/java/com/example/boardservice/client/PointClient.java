@@ -1,5 +1,6 @@
 package com.example.boardservice.client;
 
+import com.example.boardservice.dto.AddPointsRequestDto;
 import com.example.boardservice.dto.DeductPointsRequestDto;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
@@ -24,6 +25,18 @@ public class PointClient {
                 .uri("/points/deduct")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(deductPointsRequestDto)
+                .retrieve()
+                .toBodilessEntity();
+    }
+
+    // 포인트 차감에 대한 보상트랜잭션 처리를 위한 REST API 호출
+    public void addPoints(Long userId, int amount) {
+        AddPointsRequestDto addPointsRequestDto = new AddPointsRequestDto(userId, amount);
+
+        this.restClient.post()
+                .uri("/points/add")
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(addPointsRequestDto)
                 .retrieve()
                 .toBodilessEntity();
     }
