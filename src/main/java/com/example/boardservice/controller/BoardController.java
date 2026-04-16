@@ -20,9 +20,10 @@ public class BoardController {
 
     @PostMapping
     public ResponseEntity<Void> create(
-            @RequestBody CreateBoardRequestDto createBoardRequestDto
+            @RequestBody CreateBoardRequestDto createBoardRequestDto,
+            @RequestHeader("X-User-Id") Long userId // api gateway 에서 인증토큰 검증 완료시 userId를 헤더에 담아서 보내줌
     ) {
-        boardService.create(createBoardRequestDto);
+        boardService.create(createBoardRequestDto, userId);
         return ResponseEntity.noContent().build();
     }
 

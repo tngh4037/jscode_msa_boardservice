@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class BoardService {
 
     private static final int BOARD_POINT_DEDUCT_AMOUNT = 100;
-    private static final int BOARD_ACTIVITY_ADD_SCORE = 10;
+    // private static final int BOARD_ACTIVITY_ADD_SCORE = 10; // userservice 마이크로서비스에서 처리
 
     private final BoardRepository boardRepository;
     private final UserClient userClient;
@@ -44,7 +44,7 @@ public class BoardService {
     }
 
     // @Transactional
-    public void create(CreateBoardRequestDto createBoardRequestDto) {
+    public void create(CreateBoardRequestDto createBoardRequestDto, Long userId) {
         // 게시글 저장을 성공했는지 판단하는 플래그
         boolean isBoardCreated = false;
         Long savedBoardId = null;
@@ -55,7 +55,7 @@ public class BoardService {
         try {
 
             // 1) 포인트 차감
-            this.pointClient.deductPoints(createBoardRequestDto.getUserId(), BOARD_POINT_DEDUCT_AMOUNT);
+            this.pointClient.deductPoints(userId, BOARD_POINT_DEDUCT_AMOUNT);
             isPointDeducted = true;
             System.out.println("포인트 차감 성공");
 
@@ -63,7 +63,7 @@ public class BoardService {
             Board board = new Board(
                     createBoardRequestDto.getTitle(),
                     createBoardRequestDto.getContent(),
-                    createBoardRequestDto.getUserId()
+                    userId
             );
             Board savedBoard = this.boardRepository.save(board);
             savedBoardId = savedBoard.getBoardId();
@@ -76,7 +76,7 @@ public class BoardService {
             // System.out.println("포인트 적립 성공");
 
             // - 비동기 처리 (Kafka 이벤트 발행)
-            BoardCreatedEvent boardCreatedEvent = new BoardCreatedEvent(createBoardRequestDto.getUserId());
+            BoardCreatedEvent boardCreatedEvent = new BoardCreatedEvent(userId);
             String message = toJsonString(boardCreatedEvent);
             this.kafkaTemplate.send("board.created", message);
             System.out.println("게시글 작성 완료 이벤트 발행");
@@ -92,7 +92,7 @@ public class BoardService {
 
             // 포인트 차감 보상 트랜잭션 실행 => 포인트 적립
             if (isPointDeducted) {
-                this.pointClient.addPoints(createBoardRequestDto.getUserId(), BOARD_POINT_DEDUCT_AMOUNT);
+                this.pointClient.addPoints(userId, BOARD_POINT_DEDUCT_AMOUNT);
                 System.out.println("[보상트랜잭션] 포인트 적립");
             }
 
